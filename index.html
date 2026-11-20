@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>おぉいぇーい - 月間ログ</title>
+    <style>
+        :root { --primary: #2d8a6e; --bg: #f2f7f5; --card: #ffffff; --accent: #e67e22; --hint: #fff4e6; --game: #6c5ce7; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 10px; color: #333; }
+        .app { width: 100%; max-width: 900px; margin: 0 auto; }
+        .card { background: var(--card); border-radius: 15px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        h1 { font-size: 1.4rem; color: var(--primary); text-align: center; margin-bottom: 15px; }
+        .date-selector { text-align: center; margin-bottom: 20px; display: flex; justify-content: center; gap: 5px; }
+        .date-selector input { padding: 10px; border-radius: 10px; border: 2px solid var(--primary); font-size: 1.1rem; width: 65%; }
+        .today-btn { padding: 10px; border-radius: 10px; border: none; background: #e0eadd; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        h2 { font-size: 1rem; margin-bottom: 12px; border-left: 5px solid var(--primary); padding-left: 10px; color: #444; }
+        h2.heart { border-left-color: var(--accent); color: var(--accent); }
+        h2.game { border-left-color: var(--game); color: var(--game); }
+        .grid { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
+        .btn-check { flex: 1; border: 2px solid #eee; background: white; border-radius: 12px; padding: 15px 5px; cursor: pointer; font-size: 1.3rem; transition: 0.2s; opacity: 0.6; }
+        .btn-check.active { border-color: var(--primary); background: #f0fdf4; transform: scale(0.95); opacity: 1; box-shadow: 0 2px 8px rgba(45, 138, 110, 0.2); }
+        .meal-unit { flex: 1; display: flex; flex-direction: column; align-items: center; }
+        .meal-label { font-size: 0.85rem; color: #666; margin-bottom: 6px; font-weight: bold; }
+        .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        input[type="time"], input[type="number"], textarea, input[type="password"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1.1rem; box-sizing: border-box; font-family: inherit; }
+        textarea { height: 80px; resize: none; margin-bottom: 10px; }
+        .heart-box { border: 2.2px solid var(--accent); background-color: #fff9f8; }
+        .game-input { border: 2px solid var(--game); }
+        #hint-display { display: none; background: var(--hint); border: 1px solid #fbd38d; padding: 15px; border-radius: 12px; margin-bottom: 20px; line-height: 1.5; color: #744210; }
+        .hint-title { font-weight: bold; border-bottom: 1px solid #fbd38d; margin-bottom: 8px; display: block; }
+        .save-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 18px; border-radius: 35px; font-weight: bold; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 15px rgba(45, 138, 110, 0.3); }
+        .table-container { width: 100%; overflow-x: auto; background: white; border-radius: 8px; border: 1px solid #eee; }
+        table { border-collapse: collapse; min-width: 100%; }
+        th.label-col { position: sticky; left: 0; background: #f0fdf4; color: var(--primary); z-index: 10; min-width: 60px; font-size: 0.65rem; border-right: 1.5px solid var(--primary); padding: 10px 4px; }
+        td, th { border: 1px solid #eee; padding: 8px 4px; text-align: center; min-width: 65px; white-space: nowrap; font-size: 0.75rem; }
+        .date-header { font-weight: bold; background: #fafafa; }
+        .memo-row td { font-size: 0.7rem; white-space: normal; min-width: 140px; vertical-align: top; text-align: left; padding: 8px; }
+
+        #toast-msg { display: none; background: #2d8a6e; color: white; text-align: center; padding: 10px; border-radius: 10px; font-weight: bold; margin-bottom: 15px; font-size: 0.95rem; }
+
+        .login-card { background: #2d3436; color: #ffeaa7; text-align: center; border: 3px solid #fdcb6e; }
+        .game-title { font-size: 1.6rem; margin-bottom: 5px; text-shadow: 2px 2px #d63031; font-family: monospace; }
+        .game-subtitle { font-size: 0.8rem; color: #dfe6e9; margin-bottom: 20px; }
+        .pass-group { max-width: 250px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+        .pass-input { text-align: center; font-size: 1.2rem; border: 2px solid #fdcb6e; background: #000; color: #ffeaa7; }
+        .game-btn { background: #e67e22; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 0 #d35400; }
+        .game-btn:active { transform: translateY(4px); box-shadow: none; }
+        .user-status { display: flex; justify-content: space-between; align-items: center; background: #f0f3f1; padding: 8px 15px; border-radius: 10px; margin-bottom: 15px; font-size: 0.85rem; font-weight: bold; }
+        .logout-btn { background: #ff7675; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; }
+        
+        .sleep-row { background: #f8f9fa; padding: 8px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e9ecef; }
+        .btn-add-sleep { width: 100%; background: #e2e8f0; border: 1px dashed #cbd5e1; padding: 8px; border-radius: 8px; color: #475569; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .btn-del-sleep { background: #ff7675; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="card login-card" id="login-screen">
+        <div class="game-title">PRESS START</div>
+        <div class="game-subtitle">パスコードを入力してください</div>
+        <div class="pass-group">
+            <input type="password" id="pass-code" class="pass-input" placeholder="パスコード" onkeydown="if(event.key==='Enter') verifyPass()">
+            <button type="button" class="game-btn" onclick="verifyPass()">決定</button>
+        </div>
+    </div>
+
+    <div id="main-app" style="display: none;">
+        <div class="user-status">
+            <span>🎮 ログイン中（Firebase同期有効）</span>
+            <button type="button" class="logout-btn" onclick="logout()">ロックする</button>
+        </div>
+
+        <div class="card">
+            <h1>おぉいぇーい</h1>
+            <div id="toast-msg">✅ 保存しました</div>
+            <div class="date-selector">
+                <input type="date" id="target-date">
+                <button type="button" class="today-btn" onclick="setToday()">今日</button>
+            </div>
+            <div id="hint-display">
+                <span class="hint-title">💡 今日を生きるヒント</span>
+                <div id="hint-text"></div>
+            </div>
+            <h2 class="heart">心の中での気持ち（本音・不安）</h2>
+            <textarea id="heart-memo" class="heart-box" placeholder="ここに本音や、今日遊んだゲームの感想を打ち明けてみてください..."></textarea>
+            <h2 class="game">ゲームした時間</h2>
+            <input type="number" id="game-hours" class="game-input" placeholder="0" min="0" step="0.5">
+            <h2>外向きの調子</h2>
+            <div class="grid" id="mood-group">
+                <button type="button" class="btn-check" onclick="selectMood(this)">😊</button>
+                <button type="button" class="btn-check" onclick="selectMood(this)">😴</button>
+                <button type="button" class="btn-check" onclick="selectMood(this)">🥺</button>
+                <button type="button" class="btn-check" onclick="selectMood(this)">💢</button>
+            </div>
+            <h2>食事・生活記録</h2>
+            <div class="grid">
+                <div class="meal-unit"><span class="meal-label">昨晩</span><button type="button" class="btn-check meal-btn" onclick="this.classList.toggle('active')">🍛</button></div>
+                <div class="meal-unit"><span class="meal-label">朝食</span><button type="button" class="btn-check meal-btn" onclick="this.classList.toggle('active')">🍞</button></div>
+                <div class="meal-unit"><span class="meal-label">昼食</span><button type="button" class="btn-check meal-btn" onclick="this.classList.toggle('active')">🍱</button></div>
+            </div>
+            
+            <h2>睡眠時間（複数回入力可）</h2>
+            <div id="sleep-container"></div>
+            <button type="button" class="btn-add-sleep" onclick="addSleepRow()">+ 睡眠時間を追加する</button>
+
+            <textarea id="memo" placeholder="備考：通院、役所など"></textarea>
+            <button type="button" class="save-btn" onclick="saveData()">決定してヒントをもらう</button>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin:0; border:none; padding:0;">これまでの歩み</h2>
+                <select id="month-filter" onchange="showHistory()" style="padding: 5px; border-radius: 8px; border: 1px solid var(--primary);"></select>
+            </div>
+            <div class="table-container">
+                <table id="matrix-table">
+                    <tr id="row-date"><th class="label-col">日付</th></tr>
+                    <tr id="row-mood"><th class="label-col">調子</th></tr>
+                    <tr id="row-heart" class="memo-row"><th class="label-col" style="color:var(--accent)">心の声</th></tr>
+                    <tr id="row-game"><th class="label-col" style="color:var(--game)">ゲーム</th></tr>
+                    <tr id="row-meals"><th class="label-col">食事</th></tr>
+                    <tr id="row-sleep"><th class="label-col">睡眠</th></tr>
+                    <tr id="row-memo" class="memo-row"><th class="label-col">備考</th></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // Firebaseの設定情報を各自プロジェクトの設定値に書き換えてください
+    const firebaseConfig = {
+    apiKey: "AIzaSyAgD9PChLzCtauYWzttd6WBbpO-SDywVrA",
+    authDomain: "nikki-daiki.firebaseapp.com",
+    databaseURL: "https://nikki-daiki-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "nikki-daiki",
+    storageBucket: "nikki-daiki.firebasestorage.app",
+    messagingSenderId: "776753962169",
+    appId: "1:776753962169:web:9c3728e884de805aff4f68",
+    measurementId: "G-802JETW77L"
+  };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const REQUIRED_PASS = 'snssns';
+    let globalHistory = [];
+
+    const DAILY_QUOTES = [
+        "明日は明日の風が吹く。（ことわざ）",
+        "元気を出しなさい。今日の失敗は、明日の成功の糧となる。（ヘレン・ケラー）",
+        "下を向いていたら、虹を見つけることは出来ないよ。（チャールズ・チャップリン）",
+        "無駄な一日などない。生きているだけで、君はすでに何かを成し遂げている。（ゲーテ）",
+        "雨はいつかやむ。夜はいつか明ける。（格言）",
+        "失敗したのではない。うまくいかない方法を10,000通り発見しただけだ。（トーマス・エジソン）",
+        "自分の歩幅で進めばいい。走る必要なんてない。（スヌーピー）",
+        "逃げたっていい。生きてさえいれば次のチャンスはある。（武者小路実篤）",
+        "止まりさえしなければ、どんなにゆっくり進んでも問題ない。（孔子）",
+        "過去を変えることはできないが、未来はこれからの自分次第だ。（アルフレッド・アドラー）",
+        "人生とは自分を見つけることではない。人生とは自分を創ることだ。（バーナード・ショー）",
+        "今日という日は、残りの人生の最初の一日である。（チャールズ・ディードリッヒ）",
+        "休むことも仕事のうち。自分を甘やかす日があっていい。（格言）",
+        "あなたが転んだことに関心はない。そこから立ち上がることに関心がある。（エイブラハム・リンカーン）",
+        "雲の向こうは、いつも青空。（ルイーザ・メイ・オルコット）",
+        "完璧を目指すより、まずは終わらせることが重要だ。（マーク・ザッカーバーグ）",
+        "何事も成功するまでは不可能に思えるものだ。（ネルソン・マンデラ）",
+        "他人と比較して他より優れている人が偉いのではない。過去の自分と比較して発達している人が偉いのだ。（ヘミングウェイ）",
+        "少しずつ、一歩ずつ進めば、やがて目的の場所に到達する。（ルソー）",
+        "悩んでも愚痴ってもいい。それが人間らしさというものだ。（あいだみつを）",
+        "人生は近くで見ると悲劇だが、遠くから見ればコメディだ。（チャールズ・チャップリン）",
+        "やってしまった後悔は次第に小さくなるが、やらなかった後悔は次第に大きくなる。（林修）",
+        "限界を決めるのはいつも自分の心だ。（アリ）",
+        "思い悩むな。今日できることに全力を注ぎ、あとは流れに任せよ。（デール・カーネギー）",
+        "自分自身を信じてごらん。そうすればどう生きていくかがわかる。（ゲーテ）",
+        "幸せだから歌うのではない。歌うから幸せなのだ。（ウィリアム・ジェームズ）",
+        "自分のペースを守ること。それが長距離を走り切る唯一の方法だ。（村上春樹）",
+        "遠回りすることが、一番の近道になることもある。（イチロー）",
+        "どんなに暗い夜でも、朝はかならずやってくる。（シェイクスピア）",
+        "今ここにあるものに感謝しなさい。それが幸せへの第一歩だ。（エピクテトス）",
+        "生きているだけで丸儲け。（明石家さんま）"
+    ];
+
+    window.onload = () => {
+        initLoginScreen();
+        initFirestoreListener();
+    };
+
+    function initLoginScreen() {
+        document.getElementById('pass-code').value = "";
+        document.getElementById('login-screen').style.display = 'block';
+        document.getElementById('main-app').style.display = 'none';
+    }
+
+    window.verifyPass = function() {
+        const inputPass = document.getElementById('pass-code').value;
+        if (inputPass === REQUIRED_PASS) {
+            openApp();
+        } else {
+            alert("パスコードが違います");
+            document.getElementById('pass-code').value = "";
+        }
+    };
+
+    function openApp() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        setToday();
+    }
+
+    window.logout = function() {
+        initLoginScreen();
+    };
+
+    window.setToday = function() {
+        const now = new Date();
+        const offset = now.getTimezoneOffset();
+        const localDate = new Date(now.getTime() - (offset*60*1000)).toISOString().split('T')[0];
+        document.getElementById('target-date').value = localDate;
+        loadExistingData();
+    };
+
+    document.getElementById('target-date').addEventListener('change', loadExistingData);
+
+    window.selectMood = function(btn) {
+        document.querySelectorAll('#mood-group .btn-check').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    };
+
+    window.addSleepRow = function(start = "23:00", end = "07:00") {
+        const container = document.getElementById('sleep-container');
+        const div = document.createElement('div');
+        div.className = 'sleep-row row';
+        div.innerHTML = `
+            <div style="flex:1"><span class="meal-label">就寝</span><input type="time" class="sleep-start" value="${start}"></div>
+            <div style="flex:1"><span class="meal-label">起床</span><input type="time" class="sleep-end" value="${end}"></div>
+            <button type="button" class="btn-del-sleep" onclick="this.parentElement.remove()">削除</button>
+        `;
+        container.appendChild(div);
+    };
+
+    function initFirestoreListener() {
+        const logsRef = collection(db, "users", "default_user", "logs");
+        onSnapshot(logsRef, (snapshot) => {
+            globalHistory = [];
+            snapshot.forEach((doc) => {
+                globalHistory.push(doc.data());
+            });
+            globalHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+            showHistory();
+            loadExistingData();
+        });
+    }
+
+    function loadExistingData() {
+        const targetDate = document.getElementById('target-date').value;
+        const data = globalHistory.find(item => item.date === targetDate);
+
+        document.querySelectorAll('.btn-check').forEach(b => b.classList.remove('active'));
+        document.getElementById('memo').value = "";
+        document.getElementById('heart-memo').value = "";
+        document.getElementById('game-hours').value = "";
+        document.getElementById('sleep-container').innerHTML = "";
+        document.getElementById('hint-display').style.display = 'none';
+
+        if (data) {
+            document.querySelectorAll('#mood-group .btn-check').forEach(btn => {
+                if (btn.innerText === data.mood) btn.classList.add('active');
+            });
+            const mealBtns = document.querySelectorAll('.meal-btn');
+            [...data.meals].forEach((char, i) => {
+                if (char === "●" && mealBtns[i]) mealBtns[i].classList.add('active');
+            });
+            
+            if (data.sleepRecords && data.sleepRecords.length > 0) {
+                data.sleepRecords.forEach(r => addSleepRow(r.start, r.end));
+            } else if (data.range) {
+                const [s, w] = data.range.split('-');
+                addSleepRow(s, w);
+            } else {
+                addSleepRow();
+            }
+
+            document.getElementById('memo').value = data.memo || "";
+            document.getElementById('heart-memo').value = data.heart || "";
+            document.getElementById('game-hours').value = data.game || "";
+        } else {
+            addSleepRow();
+        }
+    }
+
+    function calculateTotalSleep(records) {
+        let totalMinutes = 0;
+        records.forEach(r => {
+            if(!r.start || !r.end) return;
+            let [sH, sM] = r.start.split(':').map(Number);
+            let [eH, eM] = r.end.split(':').map(Number);
+            let diff = (eH * 60 + eM) - (sH * 60 + sM);
+            if (diff <= 0) diff += 1440;
+            totalMinutes += diff;
+        });
+        return `${Math.floor(totalMinutes/60)}h${totalMinutes%60}m`;
+    }
+
+    function generateHint(dateStr, mood, heartText, gameTime) {
+        if(heartText.includes("死") || heartText.includes("つらい")) {
+            return "今はとても苦しいのですね。今日一日を「やり過ごす」ことだけを考えてください。";
+        }
+
+        const dateNumbers = dateStr.replace(/-/g, '');
+        const num = parseInt(dateNumbers, 10) || 0;
+        const quoteIndex = num % DAILY_QUOTES.length;
+        const dailyQuote = DAILY_QUOTES[quoteIndex];
+
+        let gameAdvice = "";
+        if (gameTime > 5) {
+            gameAdvice = "（ゲームに没頭できたのは素晴らしいですが、目も休めてくださいね）";
+        }
+
+        return `${dailyQuote} ${gameAdvice}`;
+    }
+
+    window.saveData = async function() {
+        const dateInput = document.getElementById('target-date').value;
+        const mood = document.querySelector('#mood-group .active')?.innerText || "-";
+        const heartText = document.getElementById('heart-memo').value;
+        const gameHours = document.getElementById('game-hours').value;
+        const meals = Array.from(document.querySelectorAll('.meal-btn')).map(b => b.classList.contains('active') ? "●" : "×").join('');
+        
+        const starts = document.querySelectorAll('.sleep-start');
+        const ends = document.querySelectorAll('.sleep-end');
+        const sleepRecords = [];
+        starts.forEach((s, i) => {
+            if(s.value && ends[i].value) {
+                sleepRecords.push({ start: s.value, end: ends[i].value });
+            }
+        });
+
+        const newEntry = {
+            date: dateInput, mood: mood, meals: meals,
+            sleepRecords: sleepRecords,
+            duration: calculateTotalSleep(sleepRecords),
+            memo: document.getElementById('memo').value,
+            heart: heartText, game: gameHours
+        };
+
+        try {
+            await setDoc(doc(db, "users", "default_user", "logs", dateInput), newEntry);
+
+            const hintText = generateHint(dateInput, mood, heartText, parseFloat(gameHours));
+            document.getElementById('hint-text').innerText = hintText;
+            document.getElementById('hint-display').style.display = 'block';
+
+            const toast = document.getElementById('toast-msg');
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (e) {
+            alert("保存に失敗しました: " + e.message);
+        }
+    };
+
+    window.showHistory = function() {
+        const filter = document.getElementById('month-filter');
+        const months = [...new Set(globalHistory.map(item => item.date.substring(0, 7)))].sort().reverse();
+        
+        const prevValue = filter.value;
+        filter.innerHTML = months.map(m => `<option value="${m}">${m.replace('-', '年')}月</option>`).join('');
+        if (months.includes(prevValue)) filter.value = prevValue;
+        
+        const targetMonth = filter.value || (months.length > 0 ? months[0] : "");
+        const filtered = globalHistory.filter(item => item.date.startsWith(targetMonth));
+
+        const rows = ['date', 'mood', 'heart', 'game', 'meals', 'sleep', 'memo'];
+        rows.forEach(id => {
+            const row = document.getElementById(`row-${id}`);
+            const label = row.querySelector('th').innerText;
+            row.innerHTML = `<th class="label-col">${label}</th>`;
+        });
+
+        filtered.forEach(item => {
+            let sleepDisplay = "-";
+            if (item.sleepRecords && item.sleepRecords.length > 0) {
+                const times = item.sleepRecords.map(r => `${r.start}-${r.end}`).join('<br>');
+                sleepDisplay = `${times}<br><small style="color:#666;">(${item.duration || ''})</small>`;
+            } else if (item.range) {
+                sleepDisplay = `${item.range}<br><small style="color:#666;">(${item.duration || ''})</small>`;
+            }
+
+            document.getElementById('row-date').innerHTML += `<td class="date-header">${item.date.split('-')[2]}日</td>`;
+            document.getElementById('row-mood').innerHTML += `<td>${item.mood}</td>`;
+            document.getElementById('row-heart').innerHTML += `<td>${item.heart || ""}</td>`;
+            document.getElementById('row-game').innerHTML += `<td>${item.game ? item.game + 'h' : '-'}</td>`;
+            document.getElementById('row-meals').innerHTML += `<td>${item.meals}</td>`;
+            document.getElementById('row-sleep').innerHTML += `<td>${sleepDisplay}</td>`;
+            document.getElementById('row-memo').innerHTML += `<td>${item.memo}</td>`;
+        });
+    };
+</script>
+</body>
+</html>
