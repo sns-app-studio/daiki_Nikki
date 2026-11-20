@@ -130,22 +130,21 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-    // Firebaseの設定情報を各自プロジェクトの設定値に書き換えてください
     const firebaseConfig = {
-    apiKey: "AIzaSyAgD9PChLzCtauYWzttd6WBbpO-SDywVrA",
-    authDomain: "nikki-daiki.firebaseapp.com",
-    databaseURL: "https://nikki-daiki-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "nikki-daiki",
-    storageBucket: "nikki-daiki.firebasestorage.app",
-    messagingSenderId: "776753962169",
-    appId: "1:776753962169:web:9c3728e884de805aff4f68",
-    measurementId: "G-802JETW77L"
-  };
+        apiKey: "AIzaSyAgD9PChLzCtauYWzttd6WBbpO-SDywVrA",
+        authDomain: "nikki-daiki.firebaseapp.com",
+        databaseURL: "https://nikki-daiki-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "nikki-daiki",
+        storageBucket: "nikki-daiki.firebasestorage.app",
+        messagingSenderId: "776753962169",
+        appId: "1:776753962169:web:9c3728e884de805aff4f68",
+        measurementId: "G-802JETW77L"
+    };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db = getDatabase(app);
 
     const REQUIRED_PASS = 'snssns';
     let globalHistory = [];
@@ -186,7 +185,7 @@
 
     window.onload = () => {
         initLoginScreen();
-        initFirestoreListener();
+        initRealtimeListener();
     };
 
     function initLoginScreen() {
@@ -242,16 +241,16 @@
         container.appendChild(div);
     };
 
-    function initFirestoreListener() {
-        const logsRef = collection(db, "users", "default_user", "logs");
-        onSnapshot(logsRef, (snapshot) => {
-            globalHistory = [];
-            snapshot.forEach((doc) => {
-                globalHistory.push(doc.data());
-            });
+    function initRealtimeListener() {
+        const logsRef = ref(db, "users/default_user/logs");
+        onValue(logsRef, (snapshot) => {
+            const val = snapshot.val() || {};
+            globalHistory = Object.values(val);
             globalHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
             showHistory();
             loadExistingData();
+        }, (error) => {
+            console.error("読み込みエラー:", error);
         });
     }
 
@@ -271,9 +270,11 @@
                 if (btn.innerText === data.mood) btn.classList.add('active');
             });
             const mealBtns = document.querySelectorAll('.meal-btn');
-            [...data.meals].forEach((char, i) => {
-                if (char === "●" && mealBtns[i]) mealBtns[i].classList.add('active');
-            });
+            if (data.meals) {
+                [...data.meals].forEach((char, i) => {
+                    if (char === "●" && mealBtns[i]) mealBtns[i].classList.add('active');
+                });
+            }
             
             if (data.sleepRecords && data.sleepRecords.length > 0) {
                 data.sleepRecords.forEach(r => addSleepRow(r.start, r.end));
@@ -316,7 +317,7 @@
         const dailyQuote = DAILY_QUOTES[quoteIndex];
 
         let gameAdvice = "";
-        if (gameTime > 5) {
+        if (!isNaN(gameTime) && gameTime > 5) {
             gameAdvice = "（ゲームに没頭できたのは素晴らしいですが、目も休めてくださいね）";
         }
 
@@ -325,6 +326,11 @@
 
     window.saveData = async function() {
         const dateInput = document.getElementById('target-date').value;
+        if (!dateInput) {
+            alert("日付を選択してください");
+            return;
+        }
+
         const mood = document.querySelector('#mood-group .active')?.innerText || "-";
         const heartText = document.getElementById('heart-memo').value;
         const gameHours = document.getElementById('game-hours').value;
@@ -340,15 +346,18 @@
         });
 
         const newEntry = {
-            date: dateInput, mood: mood, meals: meals,
+            date: dateInput,
+            mood: mood,
+            meals: meals,
             sleepRecords: sleepRecords,
             duration: calculateTotalSleep(sleepRecords),
             memo: document.getElementById('memo').value,
-            heart: heartText, game: gameHours
+            heart: heartText,
+            game: gameHours
         };
 
         try {
-            await setDoc(doc(db, "users", "default_user", "logs", dateInput), newEntry);
+            await set(ref(db, `users/default_user/logs/${dateInput}`), newEntry);
 
             const hintText = generateHint(dateInput, mood, heartText, parseFloat(gameHours));
             document.getElementById('hint-text').innerText = hintText;
@@ -362,7 +371,7 @@
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (e) {
-            alert("保存に失敗しました: " + e.message);
+            alert("保存に失敗しました（Firebaseのルール設定を確認してください）: " + e.message);
         }
     };
 
@@ -397,9 +406,9 @@
             document.getElementById('row-mood').innerHTML += `<td>${item.mood}</td>`;
             document.getElementById('row-heart').innerHTML += `<td>${item.heart || ""}</td>`;
             document.getElementById('row-game').innerHTML += `<td>${item.game ? item.game + 'h' : '-'}</td>`;
-            document.getElementById('row-meals').innerHTML += `<td>${item.meals}</td>`;
+            document.getElementById('row-meals').innerHTML += `<td>${item.meals || ""}</td>`;
             document.getElementById('row-sleep').innerHTML += `<td>${sleepDisplay}</td>`;
-            document.getElementById('row-memo').innerHTML += `<td>${item.memo}</td>`;
+            document.getElementById('row-memo').innerHTML += `<td>${item.memo || ""}</td>`;
         });
     };
 </script>
